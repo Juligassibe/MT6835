@@ -1,3 +1,6 @@
+#ifndef MT6835_H
+#define MT6835_H
+
 #include <stdint.h>
 #include "driver/spi_master.h"
 #include "esp_err.h"
@@ -58,3 +61,4 @@ esp_err_t mt6835_get_abz_lead(spi_device_handle_t *mt6835Handle, uint8_t *abLead
 esp_err_t mt6835_set_abz_lead(spi_device_handle_t *mt6835Handle, uint8_t abLead);
 
 
+#endif
