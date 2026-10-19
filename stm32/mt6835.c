@@ -1,5 +1,9 @@
 #include "mt6835.h"
 
+HAL_StatusTypeDef spi_trans_receive(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len) {
+	
+}
+
 uint32_t mt6835_get_position(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
 	uint32_t angulo = 0;
 	uint8_t tx_data[6] = {0};
@@ -47,7 +51,7 @@ uint16_t mt6835_get_abz_res(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, ui
 	return abz_res + 1;
 }
 
-MT6835_RETURNS_t mt6835_set_abz_res(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, uint16_t abz_res) {
+MT6835_RETURNS_e mt6835_set_abz_res(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, uint16_t abz_res) {
 	if (abz_res > 16384 || abz_res == 0) {
 		return MT6835_INV_RES;
 	}
@@ -95,7 +99,7 @@ uint8_t mt6835_get_abz_off(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uin
 	return (rx_data[2] >> 1) & 0x01;
 }
 
-void mt6835_set_abz_off(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_OFF_t abz_off) {
+void mt6835_set_abz_off(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_OFF_e abz_off) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
@@ -135,7 +139,7 @@ uint8_t mt6835_get_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, ui
 	return rx_data[2] & 0x01;
 }
 
-void mt6835_set_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_SWAP_t abz_swap) {
+void mt6835_set_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_SWAP_e abz_swap) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
@@ -161,7 +165,7 @@ void mt6835_set_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint1
 	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
 }
 
-MT6835_RETURNS_t mt6835_set_zero(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
+MT6835_RETURNS_e mt6835_set_zero(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
@@ -192,7 +196,7 @@ uint8_t mt6835_get_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint
 	return (rx_data[2] >> 3) & 0x01;
 }
 
-void mt6835_set_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_EDGE_t z_edge) {
+void mt6835_set_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_EDGE_e z_edge) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
@@ -231,7 +235,7 @@ uint8_t mt6835_get_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uin
 	return rx_data[2] & 0x07;
 }
 
-MT6835_RETURNS_t mt6835_set_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_WIDTH_t z_width) {
+MT6835_RETURNS_e mt6835_set_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_WIDTH_e z_width) {
 	if (z_width > 7) {
 		return MT6835_INV_WIDTH;
 	}
@@ -275,7 +279,7 @@ uint8_t mt6835_get_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uin
 	return (rx_data[2] >> 6) & 0x03;
 }
 
-MT6835_RETURNS_t mt6835_set_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_PHASE_t z_phase) {
+MT6835_RETURNS_e mt6835_set_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_PHASE_e z_phase) {
 	if (z_phase > 3) {
 		return MT6835_INV_PHASE;
 	}
@@ -319,7 +323,7 @@ uint8_t mt6835_get_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uin
 	return (rx_data[2] >> 3) & 0x01;
 }
 
-void mt6835_set_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ROT_DIR_t rot_dir) {
+void mt6835_set_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ROT_DIR_e rot_dir) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
@@ -345,9 +349,9 @@ void mt6835_set_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16
 }
 
 HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, encoder_t *encoder,
-	    		  	  	  	   uint16_t abz_res, MT6835_ABZ_SWAP_t abz_swap, MT6835_Z_EDGE_t z_edge,
-							   MT6835_Z_WIDTH_t z_width, MT6835_Z_PHASE_t z_phase, MT6835_ROT_DIR_t rot_dir) {
-	MT6835_RETURNS_t err;
+	    		  	  	  	   uint16_t abz_res, MT6835_ABZ_SWAP_e abz_swap, MT6835_Z_EDGE_e z_edge,
+							   MT6835_Z_WIDTH_e z_width, MT6835_Z_PHASE_e z_phase, MT6835_ROT_DIR_e rot_dir) {
+	MT6835_RETURNS_e err;
 
 	// Configuro resolucion modo ABZ
 	err = mt6835_set_abz_res(mt6835, CS_port, CS_pin, abz_res);
