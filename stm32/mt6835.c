@@ -1,7 +1,11 @@
 #include "mt6835.h"
 
 HAL_StatusTypeDef spi_trans_receive(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len) {
-	
+	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_RESET);
+	HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(hmt6835->hspi, tx, rx, len, 10);
+	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_SET);
+
+	return status;
 }
 
 uint32_t mt6835_get_position(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
