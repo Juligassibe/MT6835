@@ -1,6 +1,6 @@
 #include "mt6835.h"
 
-HAL_StatusTypeDef spi_trans_receive(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len) {
+HAL_StatusTypeDef mt6835_spi_txrx(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len) {
 	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_RESET);
 	HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(hmt6835->hspi, tx, rx, len, 10);
 	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_SET);
@@ -8,165 +8,188 @@ HAL_StatusTypeDef spi_trans_receive(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx,
 	return status;
 }
 
-uint32_t mt6835_get_position(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
-	uint32_t angulo = 0;
+HAL_StatusTypeDef mt6835_spi_tx(mt6835_t *hmt6835, uint8_t *tx, uint8_t len) {
+	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_RESET);
+	HAL_StatusTypeDef status = HAL_SPI_Transmit(hmt6835->hspi, tx, len, 10);
+	HAL_GPIO_WritePin(hmt6835->CS_port, hmt6835->CS_pin, GPIO_PIN_SET);
+
+	return status;
+}
+
+MT6835_RETURNS_e mt6835_get_position(mt6835_t *hmt6835, uint32_t *angulo) {
 	uint8_t tx_data[6] = {0};
 	uint8_t rx_data[6] = {0};
 
 	tx_data[0] = MT6835_BURST_READ << 4;
 	tx_data[1] = MT6835_ANGLE_HIGH;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 6, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 6) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	angulo = ((uint32_t)rx_data[2] << 16) |
-			 ((uint32_t)rx_data[3] << 8)  |
-			 ((uint32_t)rx_data[4]);
+	*angulo = ((uint32_t)rx_data[2] << 16) |
+			  ((uint32_t)rx_data[3] << 8)  |
+			  ((uint32_t)rx_data[4]);
 
-	return angulo;
+	return MT6835_OK;
 }
 
-uint16_t mt6835_get_abz_res(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
-	uint16_t abz_res = 0;
+MT6835_RETURNS_e mt6835_get_abz_res(mt6835_t *hmt6835, uint16_t *abz_res) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
+	uint16_t temp_res = 0;
 
+	// Lectura del registro HIGH
 	tx_data[0] = MT6835_READ << 4;
 	tx_data[1] = MT6835_ABZ_RES_HIGH;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	abz_res = (uint16_t)rx_data[2] << 8;
+	temp_res = (uint16_t)rx_data[2] << 8;
 
-	// Avanzo al registro LOW
+	// Lectura del registro LOW
 	tx_data[1] = MT6835_ABZ_RES_LOW;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	abz_res |= rx_data[2];
+	temp_res |= rx_data[2];
 
-	abz_res >>= 2;
+	temp_res >>= 2;
 
-	return abz_res + 1;
+	*abz_res = temp_res + 1;
+
+	return MT6835_OK;
 }
 
-MT6835_RETURNS_e mt6835_set_abz_res(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, uint16_t abz_res) {
+MT6835_RETURNS_e mt6835_set_abz_res(mt6835_t *hmt6835, uint16_t abz_res) {
 	if (abz_res > 16384 || abz_res == 0) {
 		return MT6835_INV_RES;
 	}
 
 	uint8_t tx_data[3] = {0};
-	// Leo abz_off y swap para no pisarlos
-	uint8_t abz_off = mt6835_get_abz_off(mt6835, CS_port, CS_pin);
-	uint8_t abz_swap = mt6835_get_abz_swap(mt6835, CS_port, CS_pin);
+	uint8_t rx_data[3] = {0};
+	uint8_t abz_res_low = 0;
 
+	// Primero leo para no pisar bits de ABZ_OFF y ABZ_SWAP
+	tx_data[0] = MT6835_READ << 4;
+	tx_data[1] = MT6835_ABZ_RES_LOW;
+
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
+
+	abz_res_low = rx_data[2] & 0b00000011;
+
+	// Escritura del registro HIGH
 	tx_data[0] = MT6835_WRITE << 4;
 	tx_data[1] = MT6835_ABZ_RES_HIGH;
 	tx_data[2] = ((abz_res - 1) >> 6) & 0x00FF;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_tx(hmt6835, tx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	// Ahora escribo byte low
+	// Escritura del registro LOW
 	tx_data[1] = MT6835_ABZ_RES_LOW;
+	tx_data[2] = abz_res_low | (((abz_res - 1) << 2) & 0x00FF);
 
-	uint8_t temp = ((abz_res - 1) << 2) & 0x00FF;
-	temp = (abz_off == 1) ? (temp | 0x02) : (temp & 0xFD);
-	temp = (abz_swap == 1) ? (temp | 0x01) : (temp & 0xFE );
+	if (mt6835_spi_tx(hmt6835, tx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	tx_data[2] = temp;
-
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
-
-	return MT6835_RES_SET;
+	return MT6835_OK;
 }
 
-uint8_t mt6835_get_abz_off(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
+MT6835_RETURNS_e mt6835_get_abz_off(mt6835_t *hmt6835, uint8_t *abz_off) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
 	tx_data[0] = MT6835_READ << 4;
 	tx_data[1] = MT6835_ABZ_RES_LOW;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	return (rx_data[2] >> 1) & 0x01;
+	*abz_off = (rx_data[2] >> 1) & 0x01;
+
+	return MT6835_OK;
 }
 
-void mt6835_set_abz_off(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_OFF_e abz_off) {
+MT6835_RETURNS_e mt6835_set_abz_off(mt6835_t *hmt6835, uint8_t abz_off) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
-	// Primero leo para no pisar bits de abz_res y abz_swap
+	// Primero leo para no pisar bits de ABZ_RES y ABZ_SWAP
 	tx_data[0] = MT6835_READ << 4;
 	tx_data[1] = MT6835_ABZ_RES_LOW;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
 	uint8_t temp = rx_data[2];
 
 	// Si abz_off > 0 pongo el bit en 1
 	temp = (abz_off > 0) ? (temp | 0x02) : (temp & 0xFD);
 
-	// Ahora escribo registro completo con nuevo valor de abz_off
+	// Ahora escribo registro completo con nuevo valor de ABZ_OFF
 	tx_data[0] = MT6835_WRITE << 4;
 	tx_data[2] = temp;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
+
+	return MT6835_OK;
 }
 
-uint8_t mt6835_get_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
+MT6835_RETURNS_e mt6835_get_abz_swap(mt6835_t *hmt6835, uint8_t *abz_swap) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
 	tx_data[0] = MT6835_READ << 4;
 	tx_data[1] = MT6835_ABZ_RES_LOW;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	return rx_data[2] & 0x01;
+	*abz_swap = rx_data[2] & 0x01;
+
+	return MT6835_OK;
 }
 
-void mt6835_set_abz_swap(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ABZ_SWAP_e abz_swap) {
+MT6835_RETURNS_e mt6835_set_abz_swap(mt6835_t *hmt6835, uint8_t abz_swap) {
 	uint8_t tx_data[3] = {0};
 	uint8_t rx_data[3] = {0};
 
-	// Primero leo para no pisar bits de abz_res y abz_off
+	// Primero leo para no pisar bits de ABZ_RES y ABZ_OFF
 	tx_data[0] = MT6835_READ << 4;
 	tx_data[1] = MT6835_ABZ_RES_LOW;
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(mt6835, tx_data, rx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	if (mt6835_spi_txrx(hmt6835, tx_data, rx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
 	uint8_t temp = rx_data[2];
 
 	// Si abz_swap > 0 pongo el bit en 1
 	temp = (abz_swap > 0) ? (temp | 0x01) : (temp & 0xFE);
 
-	// Ahora escribo registro completo con nuevo valor de abz_off
+	// Ahora escribo registro completo con nuevo valor de ABZ_SWAP
 	tx_data[0] = MT6835_WRITE << 4;
 	tx_data[2] = temp;
+	
+	if (mt6835_spi_tx(hmt6835, tx_data, 3) != HAL_OK) {
+		return MT6835_SPI_ERROR;
+	}
 
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
-	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
+	return MT6835_OK;
 }
 
 MT6835_RETURNS_e mt6835_set_zero(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
@@ -183,7 +206,7 @@ MT6835_RETURNS_e mt6835_set_zero(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_por
 		return MT6835_ZERO_FAIL;
 	}
 
-	return MT6835_ZERO_OK;
+	return MT6835_OK;
 }
 
 uint8_t mt6835_get_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
@@ -266,7 +289,7 @@ MT6835_RETURNS_e mt6835_set_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_
 	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
 	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
 
-	return MT6835_WIDTH_OK;
+	return MT6835_OK;
 }
 
 uint8_t mt6835_get_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
@@ -310,7 +333,7 @@ MT6835_RETURNS_e mt6835_set_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_
 	HAL_SPI_Transmit(mt6835, tx_data, 3, 1000);
 	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
 
-	return MT6835_PHASE_OK;
+	return MT6835_OK;
 }
 
 uint8_t mt6835_get_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin) {
@@ -352,15 +375,15 @@ void mt6835_set_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16
 	HAL_GPIO_WritePin(CS_port, CS_pin, GPIO_PIN_SET);
 }
 
-HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, encoder_t *encoder,
+HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, mt6835_settings_t *encoder,
 	    		  	  	  	   uint16_t abz_res, MT6835_ABZ_SWAP_e abz_swap, MT6835_Z_EDGE_e z_edge,
 							   MT6835_Z_WIDTH_e z_width, MT6835_Z_PHASE_e z_phase, MT6835_ROT_DIR_e rot_dir) {
 	MT6835_RETURNS_e err;
-
+	/*
 	// Configuro resolucion modo ABZ
 	err = mt6835_set_abz_res(mt6835, CS_port, CS_pin, abz_res);
 
-	if (err != MT6835_RES_SET || mt6835_get_abz_res(mt6835, CS_port, CS_pin) != abz_res) {
+	if (err != MT6835_OK || mt6835_get_abz_res(mt6835, CS_port, CS_pin) != abz_res) {
 		encoder->abz_res = UINT16_MAX;
 		return HAL_ERROR;
 	}
@@ -400,7 +423,7 @@ HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port,
 	// Configuro ancho de pulso de Z
 	err = mt6835_set_z_width(mt6835, CS_port, CS_pin, z_width);
 
-	if (err != MT6835_WIDTH_OK || mt6835_get_z_width(mt6835, CS_port, CS_pin) != z_width) {
+	if (err != MT6835_OK || mt6835_get_z_width(mt6835, CS_port, CS_pin) != z_width) {
 		encoder->z_width = UINT8_MAX;
 		return HAL_ERROR;
 	}
@@ -410,7 +433,7 @@ HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port,
 	// Configuro fase de Z
 	err = mt6835_set_z_phase(mt6835, CS_port, CS_pin, z_phase);
 
-	if (err != MT6835_PHASE_OK || mt6835_get_z_phase(mt6835, CS_port, CS_pin) != z_phase) {
+	if (err != MT6835_OK || mt6835_get_z_phase(mt6835, CS_port, CS_pin) != z_phase) {
 		encoder->z_phase = UINT8_MAX;
 		return HAL_ERROR;
 	}
@@ -428,7 +451,7 @@ HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port,
 	encoder->rot_dir = rot_dir;
 
 	encoder->init = 1;
-
+	*/
 	return HAL_OK;
 }
 
