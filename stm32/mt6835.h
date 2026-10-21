@@ -32,12 +32,13 @@ typedef enum {
 } MT6835_ADDR_e;
 
 typedef enum {
+	MT6835_OK,
 	MT6835_INV_RES,
 	MT6835_ZERO_FAIL,
 	MT6835_INV_WIDTH,
 	MT6835_INV_PHASE,
 	MT6835_SPI_ERROR,
-	MT6835_OK
+	MT6835_CHECK_ERROR
 } MT6835_RETURNS_e;
 
 typedef enum {
@@ -78,47 +79,49 @@ typedef enum {
 	MT6835_CCW_AB = 1
 } MT6835_ROT_DIR_e;
 
+typedef enum {
+	MT6835_NOT_INIT = 0,
+	MT6835_INIT
+} MT6835_STATE_e;
+
 // Para acceder en tiempo de ejecucion a la config del encoder
 typedef struct {
-	uint8_t init;
 	uint16_t abz_res;
-	MT6835_ABZ_OFF_e abz_off;
-	MT6835_ABZ_SWAP_e abz_swap;
-	MT6835_Z_EDGE_e z_edge;
-	MT6835_Z_WIDTH_e z_width;
-	MT6835_Z_PHASE_e z_phase;
-	MT6835_ROT_DIR_e rot_dir;
+	uint8_t abz_off;
+	uint8_t abz_swap;
+	uint8_t z_edge;
+	uint8_t z_width;
+	uint8_t z_phase;
+	uint8_t rot_dir;
+	uint8_t init;
 } mt6835_settings_t;
 
 typedef struct {
 	SPI_HandleTypeDef *hspi;
 	GPIO_TypeDef *CS_port;
 	uint16_t CS_pin;
-	mt6835_settings_t *settings;
+	mt6835_settings_t settings;
 } mt6835_t;
 
 HAL_StatusTypeDef mt6835_spi_txrx(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len);		/* LISTO */
 HAL_StatusTypeDef mt6835_spi_tx(mt6835_t *hmt6835, uint8_t *tx, uint8_t len);						/* LISTO */
 HAL_StatusTypeDef mt6835_spi_txrx_dma(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len);	/* LISTO */
-MT6835_RETURNS_e mt6835_get_position(mt6835_t *hmt6835, uint32_t *angulo);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_position(mt6835_t *hmt6835, uint32_t *angulo, uint8_t *crc);							/* LISTO */
 MT6835_RETURNS_e mt6835_get_abz_res(mt6835_t *hmt6835, uint16_t *abz_res);							/* LISTO */
 MT6835_RETURNS_e mt6835_set_abz_res(mt6835_t *hmt6835, uint16_t abz_res);							/* LISTO */
 MT6835_RETURNS_e mt6835_get_abz_off(mt6835_t *hmt6835, uint8_t *abz_off);							/* LISTO */
 MT6835_RETURNS_e mt6835_set_abz_off(mt6835_t *hmt6835, uint8_t abz_off);							/* LISTO */
 MT6835_RETURNS_e mt6835_get_abz_swap(mt6835_t *hmt6835, uint8_t *abz_swap);							/* LISTO */
 MT6835_RETURNS_e mt6835_set_abz_swap(mt6835_t *hmt6835, uint8_t abz_swap);							/* LISTO */
-
-MT6835_RETURNS_e mt6835_set_zero(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin);
-uint8_t mt6835_get_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin);
-void mt6835_set_z_edge(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_EDGE_e z_edge);
-uint8_t mt6835_get_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin);
-MT6835_RETURNS_e mt6835_set_z_width(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_WIDTH_e z_width);
-uint8_t mt6835_get_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin);
-MT6835_RETURNS_e mt6835_set_z_phase(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_Z_PHASE_e z_phase);
-uint8_t mt6835_get_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin);
-void mt6835_set_rot_dir(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, MT6835_ROT_DIR_e rot_dir);
-HAL_StatusTypeDef init_encoder(SPI_HandleTypeDef *mt6835, GPIO_TypeDef *CS_port, uint16_t CS_pin, mt6835_settings_t *encoder,
-				  	  	  	   uint16_t abz_res, MT6835_ABZ_SWAP_e abz_swap, MT6835_Z_EDGE_e z_edge,
-							   MT6835_Z_WIDTH_e z_width, MT6835_Z_PHASE_e z_phase, MT6835_ROT_DIR_e rot_dir);
+MT6835_RETURNS_e mt6835_set_zero(mt6835_t *hmt6835);												/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_edge(mt6835_t *hmt6835, uint8_t *z_edge);								/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_edge(mt6835_t *hmt6835, uint8_t z_edge);								/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_width(mt6835_t *hmt6835, uint8_t *z_width);							/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_width(mt6835_t *hmt6835, uint8_t z_width);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_phase(mt6835_t *hmt6835, uint8_t *z_phase);							/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_phase(mt6835_t *hmt6835, uint8_t z_phase);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_rot_dir(mt6835_t *hmt6835, uint8_t *rot_dir);							/* LISTO */
+MT6835_RETURNS_e mt6835_set_rot_dir(mt6835_t *hmt6835, uint8_t rot_dir);							/* LISTO */
+MT6835_RETURNS_e mt6835_init(mt6835_t *hmt6835, mt6835_settings_t *settings);						/* LISTO */
 
 #endif
