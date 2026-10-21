@@ -103,25 +103,23 @@ typedef struct {
 	mt6835_settings_t settings;
 } mt6835_t;
 
-HAL_StatusTypeDef mt6835_spi_txrx(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len);		/* LISTO */
-HAL_StatusTypeDef mt6835_spi_tx(mt6835_t *hmt6835, uint8_t *tx, uint8_t len);						/* LISTO */
 HAL_StatusTypeDef mt6835_spi_txrx_dma(mt6835_t *hmt6835, uint8_t *tx, uint8_t *rx, uint8_t len);	/* LISTO */
-MT6835_RETURNS_e mt6835_get_position(mt6835_t *hmt6835, uint32_t *angulo, uint8_t *crc);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_position(mt6835_t *hmt6835, uint32_t *angulo, uint8_t *crc);			/* LISTO */
 MT6835_RETURNS_e mt6835_get_abz_res(mt6835_t *hmt6835, uint16_t *abz_res);							/* LISTO */
 MT6835_RETURNS_e mt6835_set_abz_res(mt6835_t *hmt6835, uint16_t abz_res);							/* LISTO */
-MT6835_RETURNS_e mt6835_get_abz_off(mt6835_t *hmt6835, uint8_t *abz_off);							/* LISTO */
-MT6835_RETURNS_e mt6835_set_abz_off(mt6835_t *hmt6835, uint8_t abz_off);							/* LISTO */
-MT6835_RETURNS_e mt6835_get_abz_swap(mt6835_t *hmt6835, uint8_t *abz_swap);							/* LISTO */
-MT6835_RETURNS_e mt6835_set_abz_swap(mt6835_t *hmt6835, uint8_t abz_swap);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_abz_off(mt6835_t *hmt6835, MT6835_ABZ_OFF_e *abz_off);					/* LISTO */
+MT6835_RETURNS_e mt6835_set_abz_off(mt6835_t *hmt6835, MT6835_ABZ_OFF_e abz_off);					/* LISTO */
+MT6835_RETURNS_e mt6835_get_abz_swap(mt6835_t *hmt6835, MT6835_ABZ_SWAP_e *abz_swap);				/* LISTO */
+MT6835_RETURNS_e mt6835_set_abz_swap(mt6835_t *hmt6835, MT6835_ABZ_SWAP_e abz_swap);				/* LISTO */
 MT6835_RETURNS_e mt6835_set_zero(mt6835_t *hmt6835);												/* LISTO */
-MT6835_RETURNS_e mt6835_get_z_edge(mt6835_t *hmt6835, uint8_t *z_edge);								/* LISTO */
-MT6835_RETURNS_e mt6835_set_z_edge(mt6835_t *hmt6835, uint8_t z_edge);								/* LISTO */
-MT6835_RETURNS_e mt6835_get_z_width(mt6835_t *hmt6835, uint8_t *z_width);							/* LISTO */
-MT6835_RETURNS_e mt6835_set_z_width(mt6835_t *hmt6835, uint8_t z_width);							/* LISTO */
-MT6835_RETURNS_e mt6835_get_z_phase(mt6835_t *hmt6835, uint8_t *z_phase);							/* LISTO */
-MT6835_RETURNS_e mt6835_set_z_phase(mt6835_t *hmt6835, uint8_t z_phase);							/* LISTO */
-MT6835_RETURNS_e mt6835_get_rot_dir(mt6835_t *hmt6835, uint8_t *rot_dir);							/* LISTO */
-MT6835_RETURNS_e mt6835_set_rot_dir(mt6835_t *hmt6835, uint8_t rot_dir);							/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_edge(mt6835_t *hmt6835, MT6835_Z_EDGE_e *z_edge);						/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_edge(mt6835_t *hmt6835, MT6835_Z_EDGE_e z_edge);						/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_width(mt6835_t *hmt6835, MT6835_Z_WIDTH_e *z_width);					/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_width(mt6835_t *hmt6835, MT6835_Z_WIDTH_e z_width);					/* LISTO */
+MT6835_RETURNS_e mt6835_get_z_phase(mt6835_t *hmt6835, MT6835_Z_PHASE_e *z_phase);					/* LISTO */
+MT6835_RETURNS_e mt6835_set_z_phase(mt6835_t *hmt6835, MT6835_Z_PHASE_e z_phase);					/* LISTO */
+MT6835_RETURNS_e mt6835_get_rot_dir(mt6835_t *hmt6835, MT6835_ROT_DIR_e *rot_dir);					/* LISTO */
+MT6835_RETURNS_e mt6835_set_rot_dir(mt6835_t *hmt6835, MT6835_ROT_DIR_e rot_dir);					/* LISTO */
 MT6835_RETURNS_e mt6835_init(mt6835_t *hmt6835, mt6835_settings_t *settings);						/* LISTO */
 
 #endif
